@@ -5,8 +5,8 @@ from collections import defaultdict
 
 # ===== CONFIG =====
 EXPORT_PATH = "apple_health_export/export.xml"   # put xml in same folder or change path
-OUTPUT_PATH = "output/health_last_60_days.csv"
-DAYS_BACK = 60
+OUTPUT_PATH = "health_last_60_days.csv"
+DAYS_BACK = 500
 
 # ===== DATE WINDOW =====
 end_date = datetime.now()
