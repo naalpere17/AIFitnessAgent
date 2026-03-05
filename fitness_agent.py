@@ -1,6 +1,10 @@
 import torch
+from datetime import datetime
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from calendar_helper import get_calendar_summary
+import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 class FitnessAgent:
     def __init__(self, model_id="Qwen/Qwen2.5-7B-Instruct"):
@@ -41,13 +45,29 @@ class FitnessAgent:
         """
         context_query = user_input
         
-        # Simple heuristic to trigger the calendar tool
-        # In a more advanced version, the LLM would decide this itself.
-        scheduling_keywords = ["schedule", "free time", "when can i", "find a slot", "workout window"]
+        # Get the current local time to give the AI context for "today" vs "tomorrow"
+        current_local_time = datetime.now().strftime('%A, %b %d, %Y at %I:%M %p')
+        
+        # Expanded heuristic to trigger the calendar tool for availability questions
+        scheduling_keywords = [
+            "schedule", "free time", "when can i", "find a slot", 
+            "workout window", "available", "availability", "am i free", 
+            "tomorrow", "today", "this week", "what time"
+        ]
+        
         if any(word in user_input.lower() for word in scheduling_keywords):
             print("Agent logic: Fetching calendar gaps...")
+            # Fetch calendar gaps using the helper utility
             calendar_data = get_calendar_summary(self.ical_url)
-            context_query = f"The user wants to find a time to work out. Here is their current schedule:\n{calendar_data}\n\nUser request: {user_input}"
+            
+            # Anchor the AI with the current date so it interprets "tomorrow" correctly
+            context_query = (
+                f"CRITICAL CONTEXT: Today is {current_local_time}.\n\n"
+                f"The user is asking about their schedule or availability. "
+                f"Here are the current free slots pulled from their calendar:\n{calendar_data}\n\n"
+                f"User request: {user_input}\n"
+                f"Please answer their question using the provided calendar slots in a helpful, conversational tone."
+            )
 
         # Prepare Chat Template
         messages = [
