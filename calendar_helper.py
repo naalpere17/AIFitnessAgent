@@ -1,81 +1,94 @@
+import urllib.parse
 from icalevents.icalevents import events
 from datetime import datetime, timedelta
 import pytz
 
+# --- CONFIGURATION ---
 LOCAL_TZ = pytz.timezone('America/Los_Angeles')
+BUFFER_MINUTES = 0  # Change this to 5, 10, or 30 depending on your preference
 
 def get_calendar_summary(ical_url, days_to_search=3):
-    """Fetches free slots by checking daily 'waking hour' windows."""
+    """Generates 1-hour slots with strict PST normalization and transition buffers."""
     now = datetime.now(LOCAL_TZ)
-    workout_delta = timedelta(hours=1)
-
-    # Define 'Waking Hours' for your buddy (e.g., 8 AM to 9 PM)
-    START_HOUR = 8
+    workout_duration = timedelta(hours=1)
+    buffer_delta = timedelta(minutes=BUFFER_MINUTES)
+    
+    START_HOUR = 8 
     END_HOUR = 21
 
     try:
-        # Fetching broader range in UTC for processing
-        start_search = now.astimezone(pytz.utc)
-        end_search = (now + timedelta(days=days_to_search)).astimezone(pytz.utc)
+        start_search = (now - timedelta(hours=1)).astimezone(pytz.utc)
+        end_search = (now + timedelta(days=days_to_search + 1)).astimezone(pytz.utc)
         busy_events = events(url=ical_url, start=start_search, end=end_search)
     except Exception as e:
         return f"Error accessing calendar: {e}"
 
     all_free_slots = []
 
-    # Check each day individually
     for i in range(days_to_search):
         current_day = (now + timedelta(days=i)).date()
-
-        # Define the window for THIS specific day
         day_start = LOCAL_TZ.localize(datetime.combine(current_day, datetime.min.time().replace(hour=START_HOUR)))
         day_end = LOCAL_TZ.localize(datetime.combine(current_day, datetime.min.time().replace(hour=END_HOUR)))
 
-        # Adjust day_start if we are looking at 'today' and 8 AM has already passed
         if i == 0 and now > day_start:
-            day_start = now
+            next_hour_start = now.replace(minute=0, second=0, microsecond=0) + timedelta(hours=1)
+            day_start = next_hour_start
 
-        # Filter busy events that happen during this day's window
+        # Normalize busy events to PST
         day_busy = []
         for e in busy_events:
             e_start = e.start.astimezone(LOCAL_TZ)
             e_end = e.end.astimezone(LOCAL_TZ)
-            # If event overlaps with our 8am-9pm window
             if e_start < day_end and e_end > day_start:
-                day_busy.append((max(e_start, day_start), min(e_end, day_end)))
-
-        day_busy.sort()
-
-        # Find gaps within the 8am-9pm window
-        temp_start = day_start
-        for b_start, b_end in day_busy:
-            if b_start - temp_start >= workout_delta:
-                all_free_slots.append(temp_start)
-            temp_start = max(temp_start, b_end)
-
-        # Check for gap after the last meeting of the day
-        if day_end - temp_start >= workout_delta:
-            all_free_slots.append(temp_start)
+                day_busy.append((e_start, e_end))
+        
+        # Check every hour
+        current_slot_start = day_start
+        while current_slot_start + workout_duration <= day_end:
+            current_slot_end = current_slot_start + workout_duration
+            
+            # THE BUFFER CHECK:
+            # We need to be free from (Start - Buffer) to (End + Buffer)
+            required_start = current_slot_start - buffer_delta
+            required_end = current_slot_end + buffer_delta
+            
+            is_free = True
+            for b_start, b_end in day_busy:
+                # If a busy event overlaps with our buffered window
+                if required_start < b_end and required_end > b_start:
+                    is_free = False
+                    break
+            
+            if is_free:
+                all_free_slots.append(current_slot_start)
+            
+            current_slot_start += timedelta(hours=1)
 
     if not all_free_slots:
-        return "I checked, but your daytime hours look pretty packed for the next few days!"
+        return "You're back-to-back! No buffered gaps found in the next few days."
 
-    summary = "Here are some specific windows where we could fit in a workout:\n"
-    # Take the first 6 slots to give the AI variety
-    for slot in all_free_slots[:6]:
+    summary = f"Available 1-hour slots (with {BUFFER_MINUTES}m transition buffers):\n"
+    for slot in all_free_slots[:15]:  
         summary += f"- {slot.strftime('%A, %b %d at %I:%M %p')} (ID: {slot.isoformat()})\n"
-
+    
     return summary
 
-# --- Local Testing Block ---
-# This code only runs if you execute this file directly, not when the agent imports it.
-if __name__ == "__main__":
-    # Test with a placeholder URL
-    TEST_URL = "https://calendar.google.com/calendar/ical/achang93%40ucsc.edu/private-8afb01038a9cfac469aafafe81ad8793/basic.ics"
-    
-    print("--- Testing Calendar Helper ---")
-    if "PASTE_YOUR" in TEST_URL:
-        print("Please provide a valid iCal URL in the TEST_URL variable to see real results.")
-    else:
-        result = get_calendar_summary(TEST_URL)
-        print(result)
+def generate_add_to_calendar_link(iso_start, workout_focus):
+    """Creates a URL for Google Calendar."""
+    try:
+        start_dt = datetime.fromisoformat(iso_start)
+        end_dt = start_dt + timedelta(hours=1)
+        fmt = "%Y%m%dT%H%M%SZ"
+        s_str = start_dt.astimezone(pytz.utc).strftime(fmt)
+        e_str = end_dt.astimezone(pytz.utc).strftime(fmt)
+        
+        params = {
+            "action": "TEMPLATE",
+            "text": f"🏋️ Workout: {workout_focus}",
+            "dates": f"{s_str}/{e_str}",
+            "details": f"Scheduled by AI Buddy (includes {BUFFER_MINUTES}m buffer).",
+            "sf": "true", "output": "xml"
+        }
+        return "https://www.google.com/calendar/render?" + urllib.parse.urlencode(params)
+    except Exception as e:
+        return f"Link Error: {e}"
