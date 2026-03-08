@@ -24,7 +24,7 @@ DEFAULT_SINGLE_VIDEO = os.path.join(DATA_DIR, "side_angle_squat.mp4")
 FRAME_STRIDE = 2
 
 # Visibility threshold for keypoints (0..1). Lower = keep more frames.
-VIS_THRESH = 0.50
+VIS_THRESH = 0.50 
 
 
 def analyze_video(video_path: str, pose_model) -> dict:

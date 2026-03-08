@@ -11,4 +11,4 @@ def compute_knee_angle(landmarks):
     knee = landmarks[KNEE]
     ankle = landmarks[ANKLE]
 
-    return calculate_angle(hip, knee, ankle)
+    return calculate_angle(hip, knee, ankle) 
