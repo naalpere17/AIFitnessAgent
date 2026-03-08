@@ -1,5 +1,6 @@
 import ollama
 import os
+from rag import get_exercise_details
 
 def identify_workout_machine(image_path, model_name="gemma3:27b"):
     # check if file exists
@@ -11,12 +12,12 @@ def identify_workout_machine(image_path, model_name="gemma3:27b"):
 
     try:
         response = ollama.chat(
-            model=model,
+            model=model_name,
             messages=[{
                     'role': 'user',
                     'content': (
                         "Analyze this image and identify the workout/gym machine shown. "
-                        "Provide only what the machine is called, without any additional information."
+                        "Provide only what the machine is called, without any additional information or punctuation."
                     ),
                     'images': [image_path]
                 },
