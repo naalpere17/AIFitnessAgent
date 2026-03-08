@@ -7,7 +7,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 import joblib
 import pandas as pd
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import (
     accuracy_score,
     classification_report,
@@ -16,12 +16,10 @@ from sklearn.metrics import (
     precision_score,
     recall_score,
 )
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 TRAIN_CSV = Path("data/zenodo_train_features.csv")
 TEST_CSV = Path("data/zenodo_test_features.csv")
-MODEL_OUT = Path("outputs/zenodo_logreg.joblib")
+MODEL_OUT = Path("outputs/zenodo_random_forest.joblib")
 
 FEATURE_COLS = [
     "left_knee_angle",
@@ -64,10 +62,14 @@ def main():
     X_test = test_df[FEATURE_COLS]
     y_test = test_df["label"]
 
-    clf = Pipeline([
-        ("scaler", StandardScaler()),
-        ("model", LogisticRegression(max_iter=2000, random_state=42))
-    ])
+    clf = RandomForestClassifier(
+        n_estimators=300,
+        max_depth=None,
+        min_samples_split=4,
+        min_samples_leaf=2,
+        random_state=42,
+        class_weight="balanced"
+    )
 
     clf.fit(X_train, y_train)
     y_pred = clf.predict(X_test)
