@@ -1,4 +1,5 @@
 import os
+from matplotlib.pyplot import stem
 import numpy as np
 import pandas as pd
 import torch
@@ -12,7 +13,8 @@ class SquatSeqDataset(Dataset):
         for _, row in self.labels.iterrows():
             vid = row["video"]
             label = int(row["label"])
-            path = os.path.join(features_dir, f"features_{vid}.npz")
+            stem = os.path.splitext(vid)[0]
+            path = os.path.join(features_dir, f"features_{stem}.npz")
             if os.path.exists(path):
                 self.items.append((path, label, vid))
 

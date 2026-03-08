@@ -8,7 +8,7 @@ def main():
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
     dataset = SquatSeqDataset(
-        features_dir="outputs/squat_day1",
+        features_dir="data/features",
         labels_csv="data/squat_labels.csv",
     )
 
