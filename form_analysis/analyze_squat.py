@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 import pandas as pd
 import mediapipe as mp
+from mediapipe.tasks import python
+from mediapipe.tasks.python import vision
 import argparse
 
 from form_analysis.pose_utils import get_pose_landmarks
@@ -20,6 +22,10 @@ os.makedirs(DEFAULT_OUT_DIR, exist_ok=True)
 
 VIDEO_EXTS = (".mp4", ".mov", ".avi", ".mkv")
 DEFAULT_SINGLE_VIDEO = os.path.join(DATA_DIR, "side_angle_squat.mp4")
+
+# IMPORTANT: MediaPipe 0.10+ requires a local model bundle. 
+# Download a .task file (e.g., pose_landmarker_lite.task) from the MediaPipe docs
+MODEL_PATH = "pose_landmarker_heavy.task"
 
 # Process fewer frames to speed up (set to 1 for every frame)
 FRAME_STRIDE = 2
@@ -62,6 +68,7 @@ def analyze_video(video_path: str, pose_model) -> dict:
         if frames_total % FRAME_STRIDE != 0:
             continue
 
+        # This calls the updated get_pose_landmarks we fixed earlier
         landmarks = get_pose_landmarks(frame, pose_model)
         if landmarks is None:
             continue
@@ -152,16 +159,26 @@ def main():
         if len(videos) == 0:
             videos = [DEFAULT_SINGLE_VIDEO]
 
-    mp_pose = mp.solutions.pose
+    # 1. Setup Tasks API Options
+    if not os.path.exists(MODEL_PATH):
+        raise FileNotFoundError(f"Model file not found: {MODEL_PATH}. Please download it from the MediaPipe developer site.")
+
+    base_options = python.BaseOptions(model_asset_path=MODEL_PATH)
+    options = vision.PoseLandmarkerOptions(
+        base_options=base_options,
+        output_segmentation_masks=False,
+        min_pose_detection_confidence=0.5,
+        min_pose_presence_confidence=0.5,
+        min_tracking_confidence=0.5,
+        # Using IMAGE mode perfectly mirrors the synchronous `detect()` call 
+        # in our updated `get_pose_landmarks` function.
+        running_mode=vision.RunningMode.IMAGE 
+    )
 
     results = []
-    with mp_pose.Pose(
-        static_image_mode=False,
-        model_complexity=1,
-        enable_segmentation=False,
-        min_detection_confidence=0.5,
-        min_tracking_confidence=0.5,
-    ) as pose_model:
+    
+    # 2. Initialize the model using the updated context manager syntax
+    with vision.PoseLandmarker.create_from_options(options) as pose_model:
         for vp in videos:
             print(f"Analyzing: {vp}")
             res = analyze_video(vp, pose_model)

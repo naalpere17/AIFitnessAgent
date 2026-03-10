@@ -1,5 +1,6 @@
 from exercise_detailer.equipment import Machine, Workout
 import json
+import os
 
 from schedule.fitness_agent import FitnessAgent
 from check_squat_form import run_form_check
@@ -9,7 +10,6 @@ from fitness_rec.recommend import train_personal_adapter
 from fitness_rec.predict import get_recommendation
 from fitness_rec.log_workout import log_workout
 import fitness_rec.config as config 
-
 
 # Default Values
 age_default = 22
@@ -37,6 +37,11 @@ gender = input("What is your gender (male or female)")
 if gender == "":
     gender = gender_default
 
+demographics = f"""Age: {age}
+Height: {height}
+Weight: {weight}
+Gender: {gender}"""
+
 cal_link = input("Input your google calendar link: ")
 
 if cal_link ==  "":
@@ -47,14 +52,12 @@ config.USER_HEIGHT_M  = height
 config.USER_WEIGHT_KG = weight
 config.USER_GENDER    = gender
 config.recalculate()   # recomputes EST_MAX_BPM, GENDER_ENCODED, etc.
-print(f"\nProfile set — age: {age}  height: {height}m  "
-f"weight: {weight}kg  gender: {gender}  HRmax: {config.EST_MAX_BPM} bpm")
-
-# Save user data to JSON 
+profile = f"Profile: — age: {age}  height: {height}m  weight: {weight}kg  gender: {gender}  HRmax: {config.EST_MAX_BPM} bpm"
+print(profile)
 
 exercise1 = Machine(image_path="exercise_detailer/bike.webp")
 exercise1.set_exercise_details()
-exercise2 = Workout(workout_name="Russian Twist")
+exercise2 = Workout(workout_name="Russia twist")
 exercise2.set_exercise_details()
 # RAG data now stored at exercise_detailer/available_exercises.json
 
@@ -85,18 +88,41 @@ print("\n[2/3] Training personal adapter...")
 recommend_result = train_personal_adapter(verbose=True)
 print(f"      Personalisation gain: {recommend_result['gain_pct']:.1f}%\n")
 print("\n[3/3] Getting today's recommendation...")
-prediction = get_recommendation(verbose=True)
-
-
+recommendation = get_recommendation(verbose=True)
 ## Recommendation Engine ENDS HERE ###
 
-
-
-
-
 ## User Survey After Work Out
-wo = input("Did you just complete a workout?: yes or no")
+wo = input("Did you just complete a workout?: yes or no: ")
 if wo == "":
     wo = "yes"
 if wo == "yes":
     log_workout()
+
+WORKOUT_INFO = "exercise_detailer/available_exercises.json"
+
+with open(WORKOUT_INFO, 'r', encoding='utf-8') as file:
+    data = json.load(file) # Parses into a Python dictionary/list
+workout_context_string = json.dumps(data)
+
+with open("availability_summary.txt", 'r') as file:
+    availability = file.read()
+
+if os.path.exists("outputs/form_check/squat_feedback.txt"):
+    with open("outputs/form_check/squat_feedback.txt", 'r') as file:
+        squat_form = file.read()
+else:
+    squat_form = "No squat form video provided, ignore this section.\n"
+
+prompt = f"""You are a helpful workout assistant model. Take iniative with continuing the conversation and motivating the user.
+Your goal is to provide useful information to the user when they ask questions and to provide positive encourgament for them to reach good fitness goals.
+Your knowledge (provided by manually entered data and information from other AI models) about the user, their schedule, and the workouts you are able to recommend are as follows:
+{profile}\n
+Available exercises including details on how to perform exercises and muscle groups worked (in JSON format):
+{workout_context_string}\n
+{availability}
+Details on squat form from provided a provided video:
+{squat_form}"""
+
+print()
+print()
+print(prompt)

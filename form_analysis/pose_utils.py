@@ -2,8 +2,8 @@ import cv2
 import mediapipe as mp
 import numpy as np
 
-mp_pose = mp.solutions.pose
-
+# Note: mp.solutions.pose is removed. 
+# We now rely on the MediaPipe Tasks API for inference.
 
 def _xy(point):
     """
@@ -17,20 +17,31 @@ def _xy(point):
     return np.array([point[0], point[1]], dtype=np.float32)
 
 
-def get_pose_landmarks(frame, pose_model):
+def get_pose_landmarks(frame, pose_landmarker):
     """
     Return list of (x, y, visibility) in normalized coords, or None.
 
-    This keeps the output format compatible with your existing video pipeline.
+    This keeps the output format compatible with your existing video pipeline,
+    updated for the MediaPipe Tasks API.
     """
+    # 1. Convert the BGR frame to RGB
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    results = pose_model.process(rgb)
+    
+    # 2. Convert the NumPy array to a MediaPipe Image object
+    mp_image = mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)
 
-    if not results.pose_landmarks:
+    # 3. Process the image using detect() instead of process()
+    detection_result = pose_landmarker.detect(mp_image)
+
+    # 4. Check if any poses were detected (Tasks API returns a list of people)
+    if not detection_result.pose_landmarks:
         return None
 
-    lms = results.pose_landmarks.landmark
-    return [(lm.x, lm.y, lm.visibility) for lm in lms]
+    # 5. Grab the first person detected to match legacy single-person output
+    lms = detection_result.pose_landmarks[0]
+    
+    # The new API includes visibility directly on the landmark objects
+    return [(lm.x, lm.y, getattr(lm, 'visibility', 0.0)) for lm in lms]
 
 
 def get_landmark_xy(landmarks, idx):

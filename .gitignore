@@ -1,11 +1,15 @@
+availability_summary.txt
+
 # Virtual environment 
 .venv/ 
-
+*/__pycache__/
 # Python cache 
-_pycache_/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+*.pkl
 
 # Generated outputs
 outputs/form_check/
