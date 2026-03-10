@@ -67,6 +67,7 @@ if not use_old_prompt:
     exercise2 = Workout(workout_name="Russia twist")
     exercise2.set_exercise_details()
     # RAG data now stored at exercise_detailer/available_exercises.json
+    ollama.generate(model='gemma3:27b', keep_alive=0)
 
     print("\n--- Squat Form Checker ---")
     video_path = input("Enter path to your squat video (or press Enter to skip): ")
