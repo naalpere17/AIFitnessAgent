@@ -19,3 +19,6 @@
 ## After that, please run this command on a separate terminal while running the agent:
 
 ```ollama server```
+
+## To train the Intensity Recomendation model (only need to run on the first time)
+```python fitness_rec/train.py```
