@@ -2,8 +2,9 @@ from exercise_detailer.equipment import Machine, Workout
 import json
 
 from schedule.fitness_agent import FitnessAgent
-from schedule.calendar_helper import CalendarHelper
 from check_squat_form import run_form_check
+from schedule.calendar_helper import get_calendar_summary, generate_add_to_calendar_link
+
 
 # Default Values
 age_default = 22
@@ -32,7 +33,7 @@ if cal_link ==  "":
 
 # Save user data to JSON 
 
-exercise1 = Machine(image_path="exercise_detailer/images.webp")
+exercise1 = Machine(image_path="exercise_detailer/bike.webp")
 exercise1.set_exercise_details()
 exercise2 = Workout(workout_name="Russian Twist")
 exercise2.set_exercise_details()
@@ -50,15 +51,8 @@ if video_path != "":
 ## SCHEDULE AGENT STARTS HERE ###
 # Initialize the schedule agent and calendar helper
 agent_scheduler = FitnessAgent(model_id="openai/gpt-oss-20b")
-while True:
-    user_input = input("You: ")
-        
-    # Exit condition
-    if user_input.lower() in ["exit", "quit"]: 
-        print("Goodbye")
-        break
-            
-    # 3. Pass the input to generate_response
-    response = agent_scheduler.generate_response(user_input) 
-    print(f"\nAgent: {response}\n")
+print("When do you want to work out?")
+user_input = input("You: ")
+response = agent_scheduler.generate_response(user_input) 
+    # print(f"\nAgent: {response}\n")
 ## SCHEDULE AGENT ENDS HERE ###

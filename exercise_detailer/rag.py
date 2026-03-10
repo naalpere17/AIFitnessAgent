@@ -40,7 +40,7 @@ def find_best_exercise_match(ai_output, exercises_list):
     print(f"Failed to find any match for '{ai_output}'.")
     return None
 
-def get_exercise_details(user_input, db_path='exercises.json', model_name='gemma3:27b'):
+def get_exercise_details(user_input, db_path='exercise_detailer/exercises.json', model_name='gemma3:27b'):
     try:
         with open(db_path, 'r',) as file:
             exercises = json.load(file)

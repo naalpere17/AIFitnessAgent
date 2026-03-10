@@ -1,7 +1,7 @@
 import torch
 import re
 from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
-from calendar_helper import get_calendar_summary, generate_add_to_calendar_link
+from .calendar_helper import get_calendar_summary, generate_add_to_calendar_link
 import os
 
 # os.environ["CUDA_VISIBLE_DEVICES"] = "5"
@@ -10,17 +10,17 @@ class FitnessAgent:
     def __init__(self, model_id="Qwen/Qwen2.5-7B-Instruct"):
         self.ical_url = "https://calendar.google.com/calendar/ical/achang93%40ucsc.edu/private-8afb01038a9cfac469aafafe81ad8793/basic.ics"
         
-        print(f"--- Loading {model_id} (Quantized) ---")
-        q_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_use_double_quant=True
-        )
+        # print(f"--- Loading {model_id} (Quantized) ---")
+        #q_config = BitsAndBytesConfig(
+        #    load_in_4bit=True,
+        #    bnb_4bit_compute_dtype=torch.bfloat16,
+        #    bnb_4bit_quant_type="nf4",
+        #    bnb_4bit_use_double_quant=True
+        #)
 
         self.tokenizer = AutoTokenizer.from_pretrained(model_id)
         self.model = AutoModelForCausalLM.from_pretrained(
-            model_id, device_map="auto", quantization_config=q_config, torch_dtype=torch.bfloat16
+            model_id, device_map="auto", torch_dtype=torch.bfloat16
         )
         
         self.system_prompt = (
@@ -51,7 +51,7 @@ class FitnessAgent:
     def generate_response(self, user_input):
         context = user_input
         if any(word in user_input.lower() for word in ["schedule", "free", "when", "time", "tomorrow"]):
-            print("--- 🔍 Checking calendar & updating .txt file... ---")
+            print("--- Checking calendar ---")
             availability = get_calendar_summary(self.ical_url)
             
             # Export to file immediately for other LLMs or systems to read

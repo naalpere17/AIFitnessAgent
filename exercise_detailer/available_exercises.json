@@ -1,0 +1,44 @@
+[
+    {
+        "name": "Recumbent Bike",
+        "force": null,
+        "level": "beginner",
+        "mechanic": null,
+        "equipment": "machine",
+        "primaryMuscles": [
+            "quadriceps"
+        ],
+        "secondaryMuscles": [
+            "calves",
+            "glutes",
+            "hamstrings"
+        ],
+        "instructions": [
+            "To begin, seat yourself on the bike and adjust the seat to your height.",
+            "Select the desired option from the menu. You may have to start pedaling to turn it on. You can use the manual setting, or you can select a program to use. Typically, you can enter your age and weight to estimate the amount of calories burned during exercise. The level of resistance can be changed throughout the workout. The handles can be used to monitor your heart rate to help you stay at an appropriate intensity.",
+            "Recumbent bikes offer convenience, cardiovascular benefits, and have less impact than other activities. A 150 lb person will burn about 230 calories cycling at a moderate rate for 30 minutes, compared to 450 calories or more running."
+        ],
+        "category": "cardio"
+    },
+    {
+        "name": "Russian Twist",
+        "force": "pull",
+        "level": "intermediate",
+        "mechanic": "compound",
+        "equipment": "body only",
+        "primaryMuscles": [
+            "abdominals"
+        ],
+        "secondaryMuscles": [
+            "lower back"
+        ],
+        "instructions": [
+            "Lie down on the floor placing your feet either under something that will not move or by having a partner hold them. Your legs should be bent at the knees.",
+            "Elevate your upper body so that it creates an imaginary V-shape with your thighs. Your arms should be fully extended in front of you perpendicular to your torso and with the hands clasped. This is the starting position.",
+            "Twist your torso to the right side until your arms are parallel with the floor while breathing out.",
+            "Hold the contraction for a second and move back to the starting position while breathing out. Now move to the opposite side performing the same techniques you applied to the right side.",
+            "Repeat for the recommended amount of repetitions."
+        ],
+        "category": "strength"
+    }
+]
