@@ -22,3 +22,8 @@
 
 ## To train the Intensity Recomendation model (only need to run on the first time)
 ```python fitness_rec/train.py```
+
+## Running ```main.py```
+* For the first 5 imputs (starting at ```age``` and ending at ```calendar link```) press enter and it will enter default values
+* For the squat video path, enter ```data/king_squat.mp4``` or press enter to skip.
+* When it asks if you have done a workout, type ```no``` if you don't want to enter the workout information. It is ```yes``` by default
