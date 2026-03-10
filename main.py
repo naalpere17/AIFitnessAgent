@@ -3,6 +3,7 @@ import json
 
 from schedule.fitness_agent import FitnessAgent
 from schedule.calendar_helper import CalendarHelper
+from check_squat_form import run_form_check
 
 # Default Values
 age_default = 22
@@ -27,7 +28,7 @@ if weight ==  "":
 cal_link = input("Input your google calendar link: ")
 
 if cal_link ==  "":
-    cal_link = cal_link_defa
+    cal_link = cal_link_default
 
 # Save user data to JSON 
 
@@ -37,6 +38,14 @@ exercise2 = Workout(workout_name="Russian Twist")
 exercise2.set_exercise_details()
 # RAG data now stored at exercise_detailer/available_exercises.json
 
+print("\n--- Squat Form Checker ---")
+video_path = input("Enter path to your squat video (or press Enter to skip): ")
+
+if video_path != "":
+    print("\nRunning squat form analysis...")
+    run_form_check(video_path)
+    print("\nYour squat feedback has been saved to:")
+    print("outputs/form_check/squat_feedback.txt\n")
 
 ## SCHEDULE AGENT STARTS HERE ###
 # Initialize the schedule agent and calendar helper
