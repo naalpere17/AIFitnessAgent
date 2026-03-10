@@ -11,7 +11,7 @@ import joblib
 import os
 from datetime import date
 
-from config import (
+from fitness_rec.config import (
     USER_AGE, USER_HEIGHT_M, USER_WEIGHT_KG,
     HEALTH_CSV, RPE_CSV,
 )

@@ -13,7 +13,7 @@ from sklearn.ensemble import GradientBoostingRegressor
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error
 
-from config import (
+from fitness_rec.config import (
     USER_AGE, USER_HEIGHT_M, USER_WEIGHT_KG, USER_GENDER,
     EST_MAX_BPM, GENDER_ENCODED, KCAL_PER_HOUR, HRV_SEX_ADJUSTMENT,
     HALF_LIFE_DAYS, HEALTH_CSV, WORKOUTS_CSV, RPE_CSV,

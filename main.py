@@ -7,13 +7,15 @@ from schedule.calendar_helper import get_calendar_summary, generate_add_to_calen
 from fitness_rec.train import train_global_model
 from fitness_rec.recommend import train_personal_adapter
 from fitness_rec.predict import get_recommendation
-import fitness_rec.config 
+from fitness_rec.log_workout import log_workout
+import fitness_rec.config as config 
 
 
 # Default Values
 age_default = 22
 height_default = 1.72
 weight_default = 72
+gender_default = "male"
 cal_link_default = "https://calendar.google.com/calendar/ical/achang93%40ucsc.edu/private-8afb01038a9cfac469aafafe81ad8793/basic.ics"
 age = input("What is your age: ")
 
@@ -29,6 +31,11 @@ weight = input("What is your weight (kg): ")
 
 if weight ==  "":
     weight = weight_default
+
+gender = input("What is your gender (male or female)")
+
+if gender == "":
+    gender = gender_default
 
 cal_link = input("Input your google calendar link: ")
 
@@ -80,4 +87,16 @@ print(f"      Personalisation gain: {recommend_result['gain_pct']:.1f}%\n")
 print("\n[3/3] Getting today's recommendation...")
 prediction = get_recommendation(verbose=True)
 
+
 ## Recommendation Engine ENDS HERE ###
+
+
+
+
+
+## User Survey After Work Out
+wo = input("Did you just complete a workout?: yes or no")
+if wo == "":
+    wo = "yes"
+if wo == "yes":
+    log_workout()

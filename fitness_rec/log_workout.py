@@ -17,7 +17,7 @@ import numpy as np
 import os
 from datetime import datetime, date
 
-LOG_FILE = "rpe_log.csv"
+LOG_FILE = "fitness_rec/rpe_log.csv"
 
 # RPE → intensity factor mapping (Foster et al. 2001, modified)
 # RPE 1-10 scale:

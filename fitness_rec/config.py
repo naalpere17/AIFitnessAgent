@@ -21,10 +21,10 @@ HRV_SEX_ADJUSTMENT = 1.0
 HALF_LIFE_DAYS = 60
 
 # File paths
-HEALTH_CSV    = "output/health_last_60_days.csv"
-SYNTHETIC_CSV = "synthetic_fitness_dataset.csv"
-WORKOUTS_CSV  = "workouts.csv"
-RPE_CSV       = "rpe_log.csv"
+HEALTH_CSV    = "fitness_rec/health_last_60_days.csv"
+SYNTHETIC_CSV = "fitness_rec/synthetic_fitness_dataset.csv"
+WORKOUTS_CSV  = "fitness_rec/workouts.csv"
+RPE_CSV       = "fitness_rec/rpe_log.csv"
 
 
 def recalculate():

@@ -16,7 +16,7 @@ from sklearn.impute import SimpleImputer
 from sklearn.metrics import mean_absolute_error
 from xgboost import XGBRegressor
 
-from config import SYNTHETIC_CSV
+from fitness_rec.config import SYNTHETIC_CSV
 
 FEATURES = [
     "Age", "gender_encoded", "bmi", "Resting_BPM", "Weight (kg)",
