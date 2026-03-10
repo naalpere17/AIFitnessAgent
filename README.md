@@ -29,12 +29,12 @@
 * When it asks if you have done a workout, type ```no``` if you don't want to enter the workout information. It is ```yes``` by default
 
 ## To quickly check squat form on a video: 
-'''python check_squat_form.py data/king_squat.mp4'''
+```python check_squat_form.py data/king_squat.mp4```
 
 ## To extract frames and build the dataset from the Zenodo squat dataset: 
-First, download the dataset from https://zenodo.org/records/17558630 and add it to the root directory. Then build it using the command '''python -m scripts.build_zenodo_frame_dataset'''
+First, download the dataset from https://zenodo.org/records/17558630 and add it to the root directory. Then build it using the command ```python -m scripts.build_zenodo_frame_dataset```
 
 ## After building the dataset, train the form detection models with: 
-'''python -m scripts.train_zenodo_frame_model'''
+```python -m scripts.train_zenodo_frame_model```
 
 
