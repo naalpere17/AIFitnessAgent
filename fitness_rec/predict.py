@@ -2,8 +2,8 @@
 predict.py
 ==========
 Inference: load trained models and predict today's recommended intensity.
-Run after train.py, recommend.py.
-Also incorporates any RPE logs newer than the Apple Health window.
+Loads gender config saved by recommend.py to stay in sync.
+Run after train.py and recommend.py.
 """
 
 import pandas as pd
@@ -13,15 +13,7 @@ import os
 from datetime import date
 
 # ===============================================================
-# USER PROFILE — must match train.py and recommend.py
-# ===============================================================
-USER_AGE       = 22
-USER_HEIGHT_M  = 1.75
-USER_WEIGHT_KG = 70
-EST_MAX_BPM    = 220 - USER_AGE
-
-# ===============================================================
-# LOAD MODELS
+# LOAD MODELS & USER CONFIG
 # ===============================================================
 global_model     = joblib.load("global_intensity_model.pkl")
 global_features  = joblib.load("global_feature_names.pkl")
@@ -29,10 +21,22 @@ adapter          = joblib.load("personal_adapter.pkl")
 scaler           = joblib.load("personal_scaler.pkl")
 adapter_features = joblib.load("adapter_feature_names.pkl")
 
+# Load gender config saved by recommend.py — keeps predict.py
+# automatically in sync without duplicating profile constants
+config          = joblib.load("user_config.pkl")
+USER_GENDER     = config["gender"]
+EST_MAX_BPM     = config["est_max_bpm"]
+KCAL_PER_HOUR   = config["kcal_per_hour"]
+HRV_SEX_ADJ     = config["hrv_sex_adj"]
+
+USER_AGE        = 22
+USER_HEIGHT_M   = 1.75
+USER_WEIGHT_KG  = 70
+
 # ===============================================================
 # LOAD & PREPARE APPLE HEALTH DATA
 # ===============================================================
-apple_df = pd.read_csv("health_last_60_days.csv")
+apple_df = pd.read_csv("output/health_last_60_days.csv")
 apple_df["date"] = pd.to_datetime(apple_df["date"])
 apple_df = apple_df.sort_values("date").reset_index(drop=True)
 
@@ -59,30 +63,29 @@ def minmax_norm(s):
     lo, hi = s.min(), s.max()
     return pd.Series(0.5, index=s.index) if hi == lo else (s - lo) / (hi - lo)
 
+# Sex-adjusted HRV before readiness calculation
+apple_df["hrv_avg_7d_adj"] = apple_df["hrv_avg_7d"] / HRV_SEX_ADJ
+
 apple_df["readiness"] = (
-    0.45 * minmax_norm(apple_df["hrv_avg_7d"])
+    0.45 * minmax_norm(apple_df["hrv_avg_7d_adj"])
     + 0.35 * minmax_norm(apple_df["sleep_hours_7d"])
     + 0.20 * (1 - minmax_norm(apple_df["resting_hr_avg_7d"]))
 )
 
-for col in ["hrv_avg_7d", "sleep_hours_7d", "resting_hr_avg_7d",
+for col in ["hrv_avg_7d", "hrv_avg_7d_adj", "sleep_hours_7d", "resting_hr_avg_7d",
             "active_energy_7d", "acute_load", "chronic_load"]:
     apple_df[col] = apple_df[col].fillna(apple_df[col].median())
 
-# Use latest row as base state
 latest = apple_df.iloc[-1].copy()
 
 # ===============================================================
-# OVERRIDE WITH TODAY'S RPE LOG IF AVAILABLE
-# If you've logged a workout today (even if newer than Apple Health
-# window), use today's date and carry forward the last known
-# recovery state from Apple Health.
+# CHECK FOR TODAY'S RPE LOGS
 # ===============================================================
-today_str = date.today().isoformat()
+today_str     = date.today().isoformat()
 rpe_today_tss = None
 
 if os.path.exists("rpe_log.csv"):
-    rpe_df = pd.read_csv("rpe_log.csv")
+    rpe_df     = pd.read_csv("rpe_log.csv")
     rpe_df["date"] = pd.to_datetime(rpe_df["date"])
     today_logs = rpe_df[rpe_df["date"].dt.date == date.today()]
     if not today_logs.empty:
@@ -93,12 +96,15 @@ if os.path.exists("rpe_log.csv"):
 # ===============================================================
 # STEP 1 — GLOBAL BASELINE
 # ===============================================================
+gender_encoded = 1 if USER_GENDER == "female" else 0
+
 global_input = pd.DataFrame([{
     "Age":                       USER_AGE,
+    "gender_encoded":            gender_encoded,
     "bmi":                       float(latest["bmi"]),
     "Resting_BPM":               float(latest["resting_hr_avg"]),
     "Weight (kg)":               USER_WEIGHT_KG,
-    "Session_Duration (hours)":  min(float(latest["active_energy"]) / 420, 1.5),
+    "Session_Duration (hours)":  min(float(latest["active_energy"]) / KCAL_PER_HOUR, 1.5),
     "Calories_Burned":           float(latest["active_energy"]),
     "acwr":                      float(latest["acwr"]),
     "readiness":                 float(latest["readiness"]),
@@ -112,7 +118,7 @@ global_baseline = global_model.predict(global_input)[0]
 # ===============================================================
 # STEP 2 — PERSONAL ADAPTER
 # ===============================================================
-adapter_input = np.array([[
+adapter_input        = np.array([[
     float(latest["hrv_avg_7d"]),
     float(latest["sleep_hours_7d"]),
     float(latest["resting_hr_avg_7d"]),
@@ -122,9 +128,8 @@ adapter_input = np.array([[
     float(latest["chronic_load"]),
     global_baseline,
 ]])
-
 adapter_input_scaled = scaler.transform(adapter_input)
-final_tss = max(0.0, adapter.predict(adapter_input_scaled)[0])
+final_tss            = max(0.0, adapter.predict(adapter_input_scaled)[0])
 
 # ===============================================================
 # OUTPUT
@@ -141,15 +146,15 @@ advice = {
     "Zone 4+ — VO2max / Maximum Effort": "Peak effort day. Race pace or max intensity. Recover well after.",
 }
 
-# Health data date vs today
-health_date  = latest["date"].date() if hasattr(latest["date"], "date") else latest["date"]
-data_lag     = (date.today() - health_date).days
-lag_note     = f" (Apple Health data is {data_lag} day(s) behind today)" if data_lag > 0 else ""
+health_date = latest["date"].date() if hasattr(latest["date"], "date") else latest["date"]
+data_lag    = (date.today() - health_date).days
+lag_note    = f" (Apple Health data is {data_lag} day(s) behind)" if data_lag > 0 else ""
 
 print("\n" + "=" * 45)
 print("   TODAY'S WORKOUT RECOMMENDATION")
 print("=" * 45)
 print(f"  Today:            {today_str}{lag_note}")
+print(f"  Gender:           {USER_GENDER.capitalize()}  |  HRmax: {EST_MAX_BPM} bpm")
 print(f"  Readiness:        {latest['readiness']:.2f} / 1.00")
 print(f"  ACWR:             {latest['acwr']:.2f}  (sweet spot 0.8–1.3)")
 print(f"  Global baseline:  {global_baseline:.1f} TSS")
@@ -162,6 +167,6 @@ if rpe_today_tss is not None:
     print(f"\n  Already logged:   {rpe_today_tss:.1f} TSS today")
     print(f"  Remaining:        {remaining:.1f} TSS")
     if remaining < 5:
-        print(f"  → You've hit today's target. Good work.")
+        print("  → You've hit today's target. Good work.")
 
 print("=" * 45 + "\n")

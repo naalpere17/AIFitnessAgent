@@ -29,11 +29,17 @@ from sklearn.metrics import mean_absolute_error
 USER_AGE       = 22
 USER_HEIGHT_M  = 1.75
 USER_WEIGHT_KG = 70
-EST_MAX_BPM    = 220 - USER_AGE
+USER_GENDER    = "male"    # "male" or "female"
 
-# Temporal weighting half-life in days.
-# 60 = balanced (recommended until you have 30+ RPE logs)
-# 30 = recency-focused (better once you have dense recent data)
+# Gender-adjusted max HR formula (Tanaka et al. 2001)
+if USER_GENDER == "female":
+    EST_MAX_BPM = int(206 - (0.88 * USER_AGE))
+else:
+    EST_MAX_BPM = int(208 - (0.7 * USER_AGE))
+
+GENDER_ENCODED = 1 if USER_GENDER == "female" else 0
+KCAL_PER_HOUR  = 400 if USER_GENDER == "female" else 420
+HRV_SEX_ADJUSTMENT = 0.88 if USER_GENDER == "female" else 1.0
 HALF_LIFE_DAYS = 60
 
 # ===============================================================
@@ -42,7 +48,7 @@ HALF_LIFE_DAYS = 60
 global_model    = joblib.load("global_intensity_model.pkl")
 global_features = joblib.load("global_feature_names.pkl")
 
-apple_df = pd.read_csv("health_last_60_days.csv")
+apple_df = pd.read_csv("output/health_last_60_days.csv")
 apple_df["date"] = pd.to_datetime(apple_df["date"])
 apple_df = apple_df.sort_values("date").reset_index(drop=True)
 
@@ -78,13 +84,15 @@ def minmax_norm(s):
     lo, hi = s.min(), s.max()
     return pd.Series(0.5, index=s.index) if hi == lo else (s - lo) / (hi - lo)
 
+apple_df["hrv_avg_7d_adj"] = apple_df["hrv_avg_7d"] / HRV_SEX_ADJUSTMENT
+
 apple_df["readiness"] = (
-    0.45 * minmax_norm(apple_df["hrv_avg_7d"])
+    0.45 * minmax_norm(apple_df["hrv_avg_7d_adj"])
     + 0.35 * minmax_norm(apple_df["sleep_hours_7d"])
     + 0.20 * (1 - minmax_norm(apple_df["resting_hr_avg_7d"]))
 )
 
-for col in ["hrv_avg_7d", "sleep_hours_7d", "resting_hr_avg_7d",
+for col in ["hrv_avg_7d", "hrv_avg_7d_adj", "sleep_hours_7d", "resting_hr_avg_7d",
             "active_energy_7d", "acute_load", "chronic_load"]:
     apple_df[col] = apple_df[col].fillna(apple_df[col].median())
 
@@ -95,7 +103,7 @@ for col in ["hrv_avg_7d", "sleep_hours_7d", "resting_hr_avg_7d",
 # Tier 3 (fallback): estimated TSS from active energy
 intensity_pct   = 0.55 + (apple_df["readiness"] * 0.20)
 est_workout_bpm = (intensity_pct * EST_MAX_BPM).clip(80, 185)
-est_duration    = (apple_df["active_energy"] / 420).clip(0, 1.5)
+est_duration    = (apple_df["active_energy"] / KCAL_PER_HOUR).clip(0, 1.5)
 
 apple_df["tss_estimated"] = (
     est_duration * est_workout_bpm ** 2
@@ -109,13 +117,9 @@ apple_df["tss_source"] = "estimated"
 if os.path.exists("workouts.csv"):
     workouts_df = pd.read_csv("workouts.csv")
     workouts_df["date"] = pd.to_datetime(workouts_df["date"]).dt.normalize()
-    daily_tss = (
-        workouts_df.groupby("date")["tss_gpx"]
-        .sum().reset_index()
-        .rename(columns={"tss_gpx": "tss_gpx"})
-    )
-    apple_df = apple_df.merge(daily_tss, on="date", how="left")
-    mask_gpx = apple_df["tss_gpx"].notna() & (apple_df["tss_gpx"] > 0)
+    daily_tss = workouts_df.groupby("date")["tss_gpx"].sum().reset_index()
+    apple_df  = apple_df.merge(daily_tss, on="date", how="left")
+    mask_gpx  = apple_df["tss_gpx"].notna() & (apple_df["tss_gpx"] > 0)
     apple_df.loc[mask_gpx, "target_tss"] = apple_df.loc[mask_gpx, "tss_gpx"]
     apple_df.loc[mask_gpx, "tss_source"] = "gpx"
 else:
@@ -123,16 +127,11 @@ else:
 
 # Tier 1: RPE log — highest priority, overwrites everything
 if os.path.exists("rpe_log.csv"):
-    rpe_df = pd.read_csv("rpe_log.csv")
+    rpe_df    = pd.read_csv("rpe_log.csv")
     rpe_df["date"] = pd.to_datetime(rpe_df["date"]).dt.normalize()
-
-    # If multiple sessions logged on same day, sum TSS
-    daily_rpe = (
-        rpe_df.groupby("date")["tss_rpe"]
-        .sum().reset_index()
-    )
-    apple_df = apple_df.merge(daily_rpe, on="date", how="left")
-    mask_rpe = apple_df["tss_rpe"].notna() & (apple_df["tss_rpe"] > 0)
+    daily_rpe = rpe_df.groupby("date")["tss_rpe"].sum().reset_index()
+    apple_df  = apple_df.merge(daily_rpe, on="date", how="left")
+    mask_rpe  = apple_df["tss_rpe"].notna() & (apple_df["tss_rpe"] > 0)
     apple_df.loc[mask_rpe, "target_tss"] = apple_df.loc[mask_rpe, "tss_rpe"]
     apple_df.loc[mask_rpe, "tss_source"] = "rpe"
 else:
@@ -140,7 +139,9 @@ else:
 
 # Label source summary
 source_counts = apple_df["tss_source"].value_counts()
-print("TSS label sources:")
+print(f"Gender: {USER_GENDER}  |  Est. HRmax: {EST_MAX_BPM} bpm  |  "
+      f"kcal/h: {KCAL_PER_HOUR}")
+print("\nTSS label sources:")
 for src in ["rpe", "gpx", "estimated"]:
     count = source_counts.get(src, 0)
     pct   = count / len(apple_df) * 100
@@ -160,20 +161,22 @@ print(f"TSS labels     — min: {apple_df['target_tss'].min():.1f}  "
 
 # ===============================================================
 # GLOBAL BASELINE PREDICTIONS
+# gender_encoded is added as a scalar column to match train.py
 # ===============================================================
 global_input = pd.DataFrame({
     "Age":                       USER_AGE,
+    "gender_encoded":            GENDER_ENCODED,          # scalar → broadcast
     "bmi":                       apple_df["bmi"],
     "Resting_BPM":               apple_df["resting_hr_avg"],
     "Weight (kg)":               apple_df["body_mass_avg"],
-    "Session_Duration (hours)":  (apple_df["active_energy"] / 420).clip(0, 1.5),
+    "Session_Duration (hours)":  (apple_df["active_energy"] / KCAL_PER_HOUR).clip(0, 1.5),
     "Calories_Burned":           apple_df["active_energy"],
     "acwr":                      apple_df["acwr"],
     "readiness":                 apple_df["readiness"],
     "acute_load":                apple_df["acute_load"],
     "chronic_load":              apple_df["chronic_load"],
     "est_max_bpm":               EST_MAX_BPM,
-})[global_features]
+})[global_features]   # reorder to match trained feature order exactly
 
 apple_df["global_baseline"] = global_model.predict(global_input)
 
@@ -197,20 +200,18 @@ split    = max(1, int(len(X_scaled) * 0.80))
 X_train, X_test = X_scaled[:split], X_scaled[split:]
 y_train, y_test = y[:split], y[split:]
 
-# Temporal weighting — exponential decay, recent days weighted more
-today    = apple_df["date"].max()
-days_ago = (today - apple_df["date"]).dt.days.values
-weights  = np.power(0.5, days_ago / HALF_LIFE_DAYS)
+# Temporal weighting — exponential decay
+today         = apple_df["date"].max()
+days_ago      = (today - apple_df["date"]).dt.days.values
+weights       = np.power(0.5, days_ago / HALF_LIFE_DAYS)
 weights_train = weights[:split]
 
-# Boost weight of RPE-logged days — these are ground truth labels
-# and should have outsized influence even if there are few of them
+# Boost real label days
 if apple_df["tss_source"].eq("rpe").any():
     rpe_mask = apple_df["tss_source"].values[:split] == "rpe"
     weights_train[rpe_mask] *= 5.0
     print(f"\nBoosted {rpe_mask.sum()} RPE-logged days (5× weight)")
 
-# Boost GPX days similarly — real measured data
 if apple_df["tss_source"].eq("gpx").any():
     gpx_mask = apple_df["tss_source"].values[:split] == "gpx"
     weights_train[gpx_mask] *= 2.0
@@ -239,7 +240,16 @@ for feat, imp in sorted(zip(ADAPTER_FEATURES, adapter.feature_importances_),
                          key=lambda x: x[1], reverse=True):
     print(f"  {feat:<30} {imp:.3f}")
 
+# Save all artifacts including gender config for predict.py
 joblib.dump(adapter,          "personal_adapter.pkl")
 joblib.dump(scaler,           "personal_scaler.pkl")
 joblib.dump(ADAPTER_FEATURES, "adapter_feature_names.pkl")
-print("\nSaved → personal_adapter.pkl, personal_scaler.pkl")
+joblib.dump({
+    "gender":        USER_GENDER,
+    "gender_encoded": GENDER_ENCODED,
+    "est_max_bpm":   EST_MAX_BPM,
+    "kcal_per_hour": KCAL_PER_HOUR,
+    "hrv_sex_adj":   HRV_SEX_ADJUSTMENT,
+}, "user_config.pkl")
+
+print("\nSaved → personal_adapter.pkl, personal_scaler.pkl, user_config.pkl")
