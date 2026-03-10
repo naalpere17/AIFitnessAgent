@@ -18,7 +18,9 @@
 
 ## After that, please run this command on a separate terminal while running the agent:
 
-```ollama server```
+```ollama serve```
+
+**NOTE**: make sure the ollama server is running on a separate GPU with the main.py process since the server uses a lot of vram. In order to run a process on a different GPU, an example command is: ```CUDA_VISIBLE_DEVICES=0 ollama serve```
 
 ## To train the Intensity Recomendation model (only need to run on the first time)
 ```python fitness_rec/train.py```
