@@ -7,3 +7,8 @@ tqdm
 scikit-learn
 joblib
 torch
+scikit-learn
+xgboost
+kagglehub
+seaborn
+matplotlib
