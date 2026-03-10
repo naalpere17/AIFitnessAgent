@@ -12,3 +12,9 @@ xgboost
 kagglehub
 seaborn
 matplotlib
+accelerate
+bitsandbytes
+icalevents
+pytz
+python-dateutil
+transformers
