@@ -24,6 +24,6 @@
 ```python fitness_rec/train.py```
 
 ## Running ```main.py```
-* For the first 5 imputs (starting at ```age``` and ending at ```calendar link```) press enter and it will enter default values
+* For the first 5 inputs (starting at ```age``` and ending at ```calendar link```) press enter and it will enter default values
 * For the squat video path, enter ```data/king_squat.mp4``` or press enter to skip.
 * When it asks if you have done a workout, type ```no``` if you don't want to enter the workout information. It is ```yes``` by default
