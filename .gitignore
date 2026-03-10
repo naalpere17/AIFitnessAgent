@@ -1,2 +1,5 @@
-__pycache__/
+data/
+outputs/
 .venv/
+_pycache_/
+*.pyc
