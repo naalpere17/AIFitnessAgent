@@ -1,4 +1,5 @@
 availability_summary.txt
+previous_prompt.txt
 
 # Virtual environment 
 .venv/ 
