@@ -18,3 +18,4 @@ icalevents
 pytz
 python-dateutil
 transformers
+sentencepiece
