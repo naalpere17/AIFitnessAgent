@@ -1,5 +1,23 @@
-data/
-outputs/
-.venv/
+# Virtual environment 
+.venv/ 
+
+# Python cache 
 _pycache_/
 *.pyc
+*.pyo
+*.pyd
+
+# Generated outputs
+outputs/form_check/
+outputs/squat_day1/
+
+# Generated feature files 
+data/features/ 
+
+# Large dataset (not needed to run demo)
+data/Zenodo_Squat_Dataset/
+
+# OS files 
+.DS_Store
+Thumbs.db
+
