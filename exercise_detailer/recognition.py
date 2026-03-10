@@ -1,6 +1,6 @@
 import ollama
 import os
-from rag import get_exercise_details
+from exercise_detailer.rag import get_exercise_details
 
 def identify_workout_machine(image_path, model_name="gemma3:27b"):
     # check if file exists

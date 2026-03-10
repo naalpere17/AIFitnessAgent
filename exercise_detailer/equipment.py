@@ -1,5 +1,5 @@
-import recognition
-from rag import get_exercise_details
+import exercise_detailer.recognition
+from exercise_detailer.rag import get_exercise_details
 
 class Workout:
     def __init__(self, workout_name=None):
