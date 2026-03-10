@@ -1,0 +1,18 @@
+# Data Manipulation
+pandas
+
+# Machine Learning Framework
+scikit-learn
+
+# Gradient Boosting
+xgboost
+
+# Dataset Access
+kagglehub
+
+# Model Serialization
+joblib
+
+# Visualization (for your Heatmaps)
+seaborn
+matplotlib
