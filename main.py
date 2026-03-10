@@ -4,6 +4,10 @@ import json
 from schedule.fitness_agent import FitnessAgent
 from check_squat_form import run_form_check
 from schedule.calendar_helper import get_calendar_summary, generate_add_to_calendar_link
+from fitness_rec.train import train_global_model
+from fitness_rec.recommend import train_personal_adapter
+from fitness_rec.predict import get_recommendation
+import fitness_rec.config 
 
 
 # Default Values
@@ -31,6 +35,14 @@ cal_link = input("Input your google calendar link: ")
 if cal_link ==  "":
     cal_link = cal_link_default
 
+config.USER_AGE       = age
+config.USER_HEIGHT_M  = height
+config.USER_WEIGHT_KG = weight
+config.USER_GENDER    = gender
+config.recalculate()   # recomputes EST_MAX_BPM, GENDER_ENCODED, etc.
+print(f"\nProfile set — age: {age}  height: {height}m  "
+f"weight: {weight}kg  gender: {gender}  HRmax: {config.EST_MAX_BPM} bpm")
+
 # Save user data to JSON 
 
 exercise1 = Machine(image_path="exercise_detailer/bike.webp")
@@ -56,3 +68,16 @@ user_input = input("You: ")
 response = agent_scheduler.generate_response(user_input) 
     # print(f"\nAgent: {response}\n")
 ## SCHEDULE AGENT ENDS HERE ###
+
+## Recomendation Engine STARTS HERE ###
+
+print("\n[1/3] Training global model...")
+train_result = train_global_model(verbose=True)
+print(f"      Global MAE: {train_result['mae']:.2f} TSS\n")
+print("\n[2/3] Training personal adapter...")
+recommend_result = train_personal_adapter(verbose=True)
+print(f"      Personalisation gain: {recommend_result['gain_pct']:.1f}%\n")
+print("\n[3/3] Getting today's recommendation...")
+prediction = get_recommendation(verbose=True)
+
+## Recommendation Engine ENDS HERE ###
